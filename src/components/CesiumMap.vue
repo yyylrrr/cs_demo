@@ -324,7 +324,6 @@ export default {
       }, 80);
     },
     async highLightLine(fengjivillageInfo) {
-      console.log(fengjivillageInfo);
       viewer.entities.removeById("test");
       viewer.entities.removeById("test1");
       let fengjiheight = await this.getHeight(fengjivillageInfo.fengjiXYZ[0], fengjivillageInfo.fengjiXYZ[1]) + 120

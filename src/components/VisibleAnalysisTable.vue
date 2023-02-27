@@ -79,17 +79,16 @@ export default {
             village: villageInfo[j].name,
             villageXYZ: [villageInfo[j].lon, villageInfo[j].lat],
             canViewer: "待计算",
-            order: i * villageInfo.length + i + j
+            order: i * (villageInfo.length - 1) + i + j
           })
         }
       }
 
-
       for (let i = 0; i < fengjiInfo.length; i++) {
         for (let j = 0; j < villageInfo.length; j++) {
           let timer = setTimeout(() => {
-            this.$emit("startVisibleAnalysis", this.fengjivillageInfo[i * villageInfo.length + i + j])
-          }, (i * villageInfo.length + i + j + 1) * 500);
+            this.$emit("startVisibleAnalysis", this.fengjivillageInfo[i * (villageInfo.length - 1) + i + j])
+          }, (i * (villageInfo.length - 1) + i + j + 1) * 500);
           this.timeBox.push(timer)
         }
       }
