@@ -2,8 +2,8 @@
   <div class="container">
     <div id="cesiumContainer">
       <div class="mainBox">
-        <VisibleAnalysisTable :visibleAnalysisTable="visibleAnalysisTable" @startVisibleAnalysis="startVisibleAnalysis"
-          @highLightLine="highLightLine" />
+        <VisibleAnalysisTable :isBarrier="isBarrier" @clearBarrier="clearBarrier"
+          @startVisibleAnalysis="startVisibleAnalysis" @highLightLine="highLightLine" />
       </div>
     </div>
   </div>
@@ -26,7 +26,8 @@ export default {
       fengjiPosition: [],
       villagePosition: [],
       visibleAnalysisJson: [],
-      visibleAnalysisTable: []
+      visibleAnalysisTable: [],
+      isBarrier: {}
     };
   },
   mounted() {
@@ -66,18 +67,29 @@ export default {
       this.addVillages();
     },
 
-    createFengji(lon, lat) {
-      const entity = viewer.entities.add({
+    createFengji(lon, lat, text) {
+      viewer.entities.add({
         name: 'data/风电机模型.glb',
         position: Cesium.Cartesian3.fromDegrees(lon, lat),
         model: {
           uri: 'data/风电机模型.glb',
           //不管缩放如何，模型的最小最小像素大小。
-          minimumPixelSize: 128,
+          minimumPixelSize: 12,
           //模型的最大比例尺大小。 minimumPixelSize的上限。
           maximumScale: 2000,
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
         },
+        label: {
+          text: text,
+          font: '10px sans-serif', // 字体
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE, // 样式
+          fillColor: Cesium.Color.WHITE, // 填充色
+          outlineWidth: 1,  // 字体外圈线宽度（同样也有颜色可设置）
+          verticalOrigin: Cesium.VerticalOrigin.TOP, // 垂直位置
+          horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+          // pixelOffset: new Cesium.Cartesian2(0, -30),  // 中心位置
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        }
       });
       // viewer.trackedEntity = entity;
       // 获取或设置相机当前正在跟踪的Entity实例。
@@ -86,13 +98,31 @@ export default {
     addFengjis() {
       fengjijson.features.forEach(element => {
         this.createFengji(element.geometry.coordinates[0],
-          element.geometry.coordinates[1])
+          element.geometry.coordinates[1],
+          element.properties.NAME)
       });
     },
 
-    creatVillage(viewer, postion, img) {
+    creatVillage(viewer, postion, text, img) {
       viewer.entities.add({
         position: postion,
+        label: {
+          text: text,
+          // font: parseInt(objEntity.FontSize) * 2.2 + 'px ' + objEntity.FontName,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          outlineWidth: 6,
+          translucencyByDistance: new Cesium.NearFarScalar(
+            1.5e2,
+            1.0,
+            1.5e5,
+            0.0
+          ),
+          horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+          // verticalOrigin : LSGlobe.VerticalOrigin.BOTTOM, //垂直方向以底部来计算标签的位置
+          pixelOffset: new Cesium.Cartesian2(15, -2), // 偏移量
+          disableDepthTestDistance: 1000000000, // 优先级
+          scale: 0.5
+        },
         billboard: {
           image: img,
           width: 40,
@@ -113,6 +143,7 @@ export default {
             element.geometry.coordinates[0],
             element.geometry.coordinates[1]
           ),
+          element.properties.NAME,
           villageSvg
         );
         viewer.scene.requestRender();
@@ -161,52 +192,60 @@ export default {
       }
     },
 
-    Cartesian3_to_WGS84(point) {
-      let longitude = Cesium.Math.toDegrees(point.longitude);
-      let latitude = Cesium.Math.toDegrees(point.latitude);
-      let height = point.height;
-      return { longitude: longitude, latitude: latitude, height: height };
-    },
+    // async startVisibleAnalysis() {
+    //   await this.getFengjiPosition();
+    //   await this.getVillagePosition();
+    //   this.visibleAnalysisJson.length = 0;
+    //   for (let j = 0; j < this.villagePosition.length; j++) {
+    //     for (let i = 0; i < this.fengjiPosition.length; i++) {
+    //       // 需要指定scene
+    //       let sightline = new Cesium.Sightline(viewer.scene);
+    //       let color = new Cesium.Color.fromCssColorString("rgba(80, 90, 60, 0.01)")
+    //       // sightline.hiddenColor = Cesium.Color.YELLOW;
+    //       // sightline.visibleColor = Cesium.Color.CYAN;
+    //       sightline.hiddenColor = color;
+    //       sightline.visibleColor = color;
+    //       sightline.viewPosition.length = 0;
+    //       sightline.viewPosition = [this.fengjiPosition[i].lon, this.fengjiPosition[i].lat, this.fengjiPosition[i].hei]
+    //       sightline.build();
 
-    async startVisibleAnalysis() {
-      await this.getFengjiPosition();
-      await this.getVillagePosition();
-      this.visibleAnalysisJson.length = 0;
-      for (let j = 0; j < this.villagePosition.length; j++) {
-        for (let i = 0; i < this.fengjiPosition.length; i++) {
-          // 需要指定scene
-          let sightline = new Cesium.Sightline(viewer.scene);
-          let color = new Cesium.Color.fromCssColorString("rgba(80, 90, 60, 0.01)")
-          sightline.hiddenColor = color;
-          sightline.visibleColor = color;
-          sightline.viewPosition.length = 0;
-          sightline.viewPosition = [this.fengjiPosition[i].lon, this.fengjiPosition[i].lat, this.fengjiPosition[i].hei]
-          sightline.build();
+    //       sightline.removeAllTargetPoint();
+    //       sightline.addTargetPoint({
+    //         position: [this.villagePosition[j].lon, this.villagePosition[j].lat, this.villagePosition[j].hei],
+    //         name: "f" + i.toString() + "v" + j.toString()
+    //       });
 
-          sightline.removeAllTargetPoint();
-          sightline.addTargetPoint({
-            position: [this.villagePosition[j].lon, this.villagePosition[j].lat, this.villagePosition[j].hei],
-            name: "f" + i.toString() + "v" + j.toString()
-          });
 
-          setTimeout(() => {
-            let barrier = sightline.getBarrierPoint("f" + i.toString() + "v" + j.toString(), (e) => { e })
-            this.visibleAnalysisJson.push({
-              fengji: this.fengjiPosition[i].name,
-              fengjiXYZ: [this.fengjiPosition[i].lon, this.fengjiPosition[i].lat, this.fengjiPosition[i].hei],
-              village: this.villagePosition[j].name,
-              villageXYZ: [this.villagePosition[j].lon, this.villagePosition[j].lat, this.villagePosition[j].hei],
-              isViewer: barrier.isViewer == true ? "是" : "否"
-            })
-          }, 300);
-          setTimeout(() => {
-            sightline.removeAllTargetPoint();
-          }, 600);
-        }
-      }
-      setTimeout(() => {
-        this.visibleAnalysisTable = this.visibleAnalysisJson.sort(this.sortdatalist('fengji'))
-      }, 900);
+
+    //       setTimeout(() => {
+    //         let barrier = sightline.getBarrierPoint("f" + i.toString() + "v" + j.toString(), (e) => { e })
+    //         this.visibleAnalysisJson.push({
+    //           fengji: this.fengjiPosition[i].name,
+    //           fengjiXYZ: [this.fengjiPosition[i].lon, this.fengjiPosition[i].lat, this.fengjiPosition[i].hei],
+    //           village: this.villagePosition[j].name,
+    //           villageXYZ: [this.villagePosition[j].lon, this.villagePosition[j].lat, this.villagePosition[j].hei],
+    //           isViewer: barrier.isViewer == true ? "是" : "否"
+    //         })
+
+    //         sightline.removeAllTargetPoint();
+    //       }, 30);
+
+    //       // setTimeout(() => {
+    //       //   sightline.removeAllTargetPoint();
+    //       // }, 200);
+    //     }
+    //   }
+    //   // setTimeout(() => {
+    //   //   this.visibleAnalysisTable = this.visibleAnalysisJson.sort(this.sortdatalist('fengji'))
+    //   // }, 900);
+    // },
+
+    async startVisibleAnalysis(fengjivillageInfo) {
+      let fengjiheight = await this.getHeight(fengjivillageInfo.fengjiXYZ[0], fengjivillageInfo.fengjiXYZ[1]) + 120
+      let villageheight = await this.getHeight(fengjivillageInfo.villageXYZ[0], fengjivillageInfo.villageXYZ[1])
+      let observePoint = { order: fengjivillageInfo.order, lon: fengjivillageInfo.fengjiXYZ[0], lat: fengjivillageInfo.fengjiXYZ[1], hei: fengjiheight }
+      let targetPoint = { lon: fengjivillageInfo.villageXYZ[0], lat: fengjivillageInfo.villageXYZ[1], hei: villageheight }
+      this.heightSightline(observePoint, targetPoint)
     },
 
     sortdatalist(propertyName) {
@@ -227,8 +266,9 @@ export default {
     heightSightline(observePoint, targetPoint) {
       // 需要指定scene
       let sightline = new Cesium.Sightline(viewer.scene);
-      sightline.hiddenColor = Cesium.Color.YELLOW;
-      sightline.visibleColor = Cesium.Color.CYAN;
+      let color = new Cesium.Color.fromCssColorString("rgba(80, 90, 60, 0.01)")
+      sightline.hiddenColor = color;
+      sightline.visibleColor = color;
       sightline.viewPosition = [observePoint.lon, observePoint.lat, observePoint.hei]
       // 执行
       sightline.build();
@@ -238,11 +278,12 @@ export default {
         position: [targetPoint.lon, targetPoint.lat, targetPoint.hei],
         name: "point"
       });
+      let that = this
       // 通视分析需要时间 这里获取取消设置延时触发
       setTimeout(function () {
         viewer.entities.removeById("test");
         viewer.entities.removeById("test1");
-        sightline.getBarrierPoint("point", function (e) {
+        let barrier = sightline.getBarrierPoint("point", (e) => {
           if (!e.isViewer) {
             //不可见部分
             viewer.entities.add({
@@ -254,7 +295,6 @@ export default {
                 // 指定线实体被模型遮挡的部分的材质 不设置 则遮挡不显示
                 depthFailMaterial: Cesium.Color.GREEN.withAlpha(0.9)
               }
-
             });
             // 可见部分
             viewer.entities.add({
@@ -265,7 +305,6 @@ export default {
                 material: Cesium.Color.RED.withAlpha(0.9),
                 depthFailMaterial: Cesium.Color.RED.withAlpha(0.9)
               }
-
             });
           } else {
             // 全部可见
@@ -279,18 +318,24 @@ export default {
 
             });
           }
-
-          sightline.removeAllTargetPoint()
         })
-      }, 50)
+        that.isBarrier = { barrier: barrier, order: observePoint.order }
+        sightline.removeAllTargetPoint()
+      }, 80);
     },
-    highLightLine(fengjiPoint, villagePoint) {
-
-      let observePoint = { lon: fengjiPoint[0], lat: fengjiPoint[1], hei: fengjiPoint[2] }
-      let targetPoint = { lon: villagePoint[0], lat: villagePoint[1], hei: villagePoint[2] }
-
+    async highLightLine(fengjivillageInfo) {
+      console.log(fengjivillageInfo);
+      viewer.entities.removeById("test");
+      viewer.entities.removeById("test1");
+      let fengjiheight = await this.getHeight(fengjivillageInfo.fengjiXYZ[0], fengjivillageInfo.fengjiXYZ[1]) + 120
+      let villageheight = await this.getHeight(fengjivillageInfo.villageXYZ[0], fengjivillageInfo.villageXYZ[1])
+      let observePoint = { order: fengjivillageInfo.order, lon: fengjivillageInfo.fengjiXYZ[0], lat: fengjivillageInfo.fengjiXYZ[1], hei: fengjiheight }
+      let targetPoint = { lon: fengjivillageInfo.villageXYZ[0], lat: fengjivillageInfo.villageXYZ[1], hei: villageheight }
       this.heightSightline(observePoint, targetPoint)
-
+    },
+    clearBarrier() {
+      viewer.entities.removeById("test");
+      viewer.entities.removeById("test1");
     }
   }
 };
