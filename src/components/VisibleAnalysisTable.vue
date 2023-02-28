@@ -1,11 +1,13 @@
 <template>
   <div>
     <el-button type="primary" @click="showVisibleAnalysis">通视分析</el-button>
+    <el-button type="primary" @click="exportToExcel"> 导出结果 </el-button>
     <dialog-drag v-show="isShowVisibleAnalysis" id="dialog-1" class="dialog-3" title="通视分析" pinned="false"
       :options="{ top: 80, left: 1500, width: 400, buttonPin: false }" @close="closeVisibleAnalysis">
       <div class="analysisBox">
-        <el-table :data="fengjivillageInfo" height="80vh" :cell-style="tableRowStyle"
-          :header-cell-style="tableHeaderColor" class="analysis-result-list" @row-dblclick="highLightLine">
+        <el-table :summary-method="getSummaries" show-summary :data="fengjivillageInfo" height="80vh"
+          :cell-style="tableRowStyle" :header-cell-style="tableHeaderColor" class="analysis-result-list"
+          @row-dblclick="highLightLine">
           <el-table-column prop="fengji" label="风机名" align="center">
           </el-table-column>
           <el-table-column prop="village" label="村落名" align="center">
@@ -20,6 +22,9 @@
 
 <script>
 import DialogDrag from "vue-dialog-drag";
+
+import FileSaver from 'file-saver'
+import XLSX from 'xlsx'
 
 import fengjijson from "../../public/data/风机.json"
 import villagejson from "../../public/data/村落.json"
@@ -38,7 +43,9 @@ export default {
     return {
       fengjivillageInfo: [],
       isShowVisibleAnalysis: false,
-      timeBox: []
+      timeBox: [],
+      visibleCount: 0,
+      inVisibleCount: 0
     };
   },
   methods: {
@@ -88,7 +95,7 @@ export default {
         for (let j = 0; j < villageInfo.length; j++) {
           let timer = setTimeout(() => {
             this.$emit("startVisibleAnalysis", this.fengjivillageInfo[i * (villageInfo.length - 1) + i + j])
-          }, (i * (villageInfo.length - 1) + i + j + 1) * 500);
+          }, (i * (villageInfo.length - 1) + i + j + 1) * 400);
           this.timeBox.push(timer)
         }
       }
@@ -97,9 +104,11 @@ export default {
 
 
     closeVisibleAnalysis() {
-      this.$emit("clearBarrier")
+      this.visibleCount = 0;
+      this.inVisibleCount = 0;
       this.isShowVisibleAnalysis = false
       this.timeBox.map(k => { clearTimeout(k) })
+      this.$emit("clearBarrier")
     },
 
     // 修改table tr行的背景色
@@ -115,13 +124,57 @@ export default {
     highLightLine(row) {
       this.timeBox.map(k => { clearTimeout(k) })
       this.$emit("highLightLine", row)
-    }
+    },
+    getSummaries(param) {
+      const { columns, data } = param;
+      const sums = [];
+      columns.forEach((column, index) => {
+        if (index === 0) {
+          sums[index] = '合计';
+          return;
+        } else if (index === 1) {
+          sums[index] = '可视：' + this.visibleCount;
+          return;
+        } else {
+          sums[index] = '不可视：' + this.inVisibleCount;
+          return;
+        }
+      });
+
+      return sums;
+    },
+
+    // 表格数据写入excel，并导出为Excel文件
+    exportToExcel() {
+      const XLSX = require('xlsx')
+      console.log('XLSX', XLSX, FileSaver)
+      // 使用 this.$nextTick 是在dom元素都渲染完成之后再执行
+      this.$nextTick(function () {
+        // 设置导出的内容是否只做解析，不进行格式转换     false：要解析， true:不解析
+        const xlsxParam = { raw: true }
+        const wb = XLSX.utils.table_to_book(document.querySelector('.analysis-result-list'), xlsxParam)
+        // 导出excel文件名
+        let fileName = '通视分析' + new Date().getTime() + '.xlsx'
+
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', bookSST: true, type: 'array' })
+        try {
+          // 下载保存文件
+          FileSaver.saveAs(new Blob([wbout], { type: 'application/octet-stream' }), fileName)
+        } catch (e) {
+          if (typeof console !== 'undefined') {
+            console.log(e, wbout)
+          }
+        }
+        return wbout
+      })
+    },
 
   },
   watch: {
     isBarrier: {
       handler(newValue, oldValue) {
         this.fengjivillageInfo[newValue.order].canViewer = (newValue.barrier.isViewer == true ? "是" : "否")
+        newValue.barrier.isViewer == true ? this.visibleCount++ : this.inVisibleCount++
       },
     }
   }
@@ -170,5 +223,11 @@ export default {
 
 .el-table__body {
   width: 100% !important;
+}
+
+.el-table__footer-wrapper tbody td.el-table__cell,
+.el-table__header-wrapper tbody td.el-table__cell {
+  color: #000 !important;
+  font-size: 16px !important;
 }
 </style>

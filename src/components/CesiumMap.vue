@@ -280,10 +280,10 @@ export default {
       });
       let that = this
       // 通视分析需要时间 这里获取取消设置延时触发
-      setTimeout(function () {
+      setTimeout(async function () {
         viewer.entities.removeById("test");
         viewer.entities.removeById("test1");
-        let barrier = sightline.getBarrierPoint("point", (e) => {
+        let barrier = await sightline.getBarrierPoint("point", (e) => {
           if (!e.isViewer) {
             //不可见部分
             viewer.entities.add({
@@ -321,7 +321,7 @@ export default {
         })
         that.isBarrier = { barrier: barrier, order: observePoint.order }
         sightline.removeAllTargetPoint()
-      }, 80);
+      }, 200);
     },
     async highLightLine(fengjivillageInfo) {
       viewer.entities.removeById("test");

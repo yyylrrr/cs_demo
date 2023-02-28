@@ -11,9 +11,11 @@
     "@supermap/vue-iclient3d-webgl": "^1.0.9",
     "core-js": "^3.8.3",
     "element-ui": "^2.15.13",
+    "file-saver": "^2.0.5",
     "sass-loader": "^7.3.1",
     "vue": "^2.6.14",
-    "vue-dialog-drag": "^0.1.29"
+    "vue-dialog-drag": "^0.1.29",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",
