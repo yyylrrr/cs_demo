@@ -91,14 +91,14 @@ export default {
         }
       }
 
-      for (let i = 0; i < fengjiInfo.length; i++) {
-        for (let j = 0; j < villageInfo.length; j++) {
-          let timer = setTimeout(() => {
-            this.$emit("startVisibleAnalysis", this.fengjivillageInfo[i * (villageInfo.length - 1) + i + j])
-          }, (i * (villageInfo.length - 1) + i + j + 1) * 400);
-          this.timeBox.push(timer)
-        }
+
+      for (let i = 0; i < this.fengjivillageInfo.length; i++) {
+        let timer = setTimeout(() => {
+          this.$emit("startVisibleAnalysis", this.fengjivillageInfo[i])
+        }, (i + 1) * 480);
+        this.timeBox.push(timer)
       }
+
       // this.$emit("startVisibleAnalysis")
     },
 

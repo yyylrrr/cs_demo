@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@supermap/vue-iclient3d-webgl": "^1.0.9",
+    "@turf/turf": "^6.5.0",
     "core-js": "^3.8.3",
     "element-ui": "^2.15.13",
     "file-saver": "^2.0.5",

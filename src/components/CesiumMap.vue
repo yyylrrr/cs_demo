@@ -4,6 +4,7 @@
       <div class="mainBox">
         <VisibleAnalysisTable :isBarrier="isBarrier" @clearBarrier="clearBarrier"
           @startVisibleAnalysis="startVisibleAnalysis" @highLightLine="highLightLine" />
+        <OverlapAnalysis @addBufferPolyogn="addBufferPolyogn" @closeResultOverlapAnalysis="closeResultOverlapAnalysis" />
       </div>
     </div>
   </div>
@@ -12,28 +13,35 @@
 <script>
 import fengjijson from "../../public/data/风机.json"
 import villagejson from "../../public/data/村落.json"
+
 import villageSvg from "../../public/data/村落.svg"
 
 import VisibleAnalysisTable from "./VisibleAnalysisTable.vue"
+import OverlapAnalysis from "./OverlapAnalysis.vue"
 
 let viewer;
 export default {
   components: {
-    VisibleAnalysisTable
+    VisibleAnalysisTable,
+    OverlapAnalysis
   },
+
   data() {
     return {
       fengjiPosition: [],
       villagePosition: [],
       visibleAnalysisJson: [],
       visibleAnalysisTable: [],
-      isBarrier: {}
+      isBarrier: {},
+      timerBox: ''
     };
   },
+
   mounted() {
     this.init();
     this.loadData();
   },
+
   methods: {
     init() {
       viewer = new Cesium.Viewer('cesiumContainer', {
@@ -45,16 +53,19 @@ export default {
           isSct: false
         }),
       });
+
       viewer.imageryLayers.addImageryProvider(new Cesium.BingMapsImageryProvider({
         url: 'https://dev.virtualearth.net',
         mapStyle: Cesium.BingMapsStyle.AERIAL,
         key: URL_CONFIG.BING_MAP_KEY
       }));
+
       // 设置初始位置  Cesium.Cartesian3.fromDegrees(longitude, latitude, height, ellipsoid, result)
       const boundingSphere = new Cesium.BoundingSphere(
         Cesium.Cartesian3.fromDegrees(108.88, 25.70, 600),
         30000
       );
+
       // 定位到初始位置
       viewer.camera.flyToBoundingSphere(boundingSphere, {
         // 动画，定位到初始位置的过渡时间，设置成0，就没有动画
@@ -91,8 +102,6 @@ export default {
           disableDepthTestDistance: Number.POSITIVE_INFINITY
         }
       });
-      // viewer.trackedEntity = entity;
-      // 获取或设置相机当前正在跟踪的Entity实例。
     },
 
     addFengjis() {
@@ -192,54 +201,6 @@ export default {
       }
     },
 
-    // async startVisibleAnalysis() {
-    //   await this.getFengjiPosition();
-    //   await this.getVillagePosition();
-    //   this.visibleAnalysisJson.length = 0;
-    //   for (let j = 0; j < this.villagePosition.length; j++) {
-    //     for (let i = 0; i < this.fengjiPosition.length; i++) {
-    //       // 需要指定scene
-    //       let sightline = new Cesium.Sightline(viewer.scene);
-    //       let color = new Cesium.Color.fromCssColorString("rgba(80, 90, 60, 0.01)")
-    //       // sightline.hiddenColor = Cesium.Color.YELLOW;
-    //       // sightline.visibleColor = Cesium.Color.CYAN;
-    //       sightline.hiddenColor = color;
-    //       sightline.visibleColor = color;
-    //       sightline.viewPosition.length = 0;
-    //       sightline.viewPosition = [this.fengjiPosition[i].lon, this.fengjiPosition[i].lat, this.fengjiPosition[i].hei]
-    //       sightline.build();
-
-    //       sightline.removeAllTargetPoint();
-    //       sightline.addTargetPoint({
-    //         position: [this.villagePosition[j].lon, this.villagePosition[j].lat, this.villagePosition[j].hei],
-    //         name: "f" + i.toString() + "v" + j.toString()
-    //       });
-
-
-
-    //       setTimeout(() => {
-    //         let barrier = sightline.getBarrierPoint("f" + i.toString() + "v" + j.toString(), (e) => { e })
-    //         this.visibleAnalysisJson.push({
-    //           fengji: this.fengjiPosition[i].name,
-    //           fengjiXYZ: [this.fengjiPosition[i].lon, this.fengjiPosition[i].lat, this.fengjiPosition[i].hei],
-    //           village: this.villagePosition[j].name,
-    //           villageXYZ: [this.villagePosition[j].lon, this.villagePosition[j].lat, this.villagePosition[j].hei],
-    //           isViewer: barrier.isViewer == true ? "是" : "否"
-    //         })
-
-    //         sightline.removeAllTargetPoint();
-    //       }, 30);
-
-    //       // setTimeout(() => {
-    //       //   sightline.removeAllTargetPoint();
-    //       // }, 200);
-    //     }
-    //   }
-    //   // setTimeout(() => {
-    //   //   this.visibleAnalysisTable = this.visibleAnalysisJson.sort(this.sortdatalist('fengji'))
-    //   // }, 900);
-    // },
-
     async startVisibleAnalysis(fengjivillageInfo) {
       let fengjiheight = await this.getHeight(fengjivillageInfo.fengjiXYZ[0], fengjivillageInfo.fengjiXYZ[1]) + 120
       let villageheight = await this.getHeight(fengjivillageInfo.villageXYZ[0], fengjivillageInfo.villageXYZ[1])
@@ -264,6 +225,7 @@ export default {
     },
 
     heightSightline(observePoint, targetPoint) {
+      clearTimeout(this.timerBox)
       // 需要指定scene
       let sightline = new Cesium.Sightline(viewer.scene);
       let color = new Cesium.Color.fromCssColorString("rgba(80, 90, 60, 0.01)")
@@ -280,7 +242,7 @@ export default {
       });
       let that = this
       // 通视分析需要时间 这里获取取消设置延时触发
-      setTimeout(async function () {
+      this.timerBox = setTimeout(async function () {
         viewer.entities.removeById("test");
         viewer.entities.removeById("test1");
         let barrier = await sightline.getBarrierPoint("point", (e) => {
@@ -321,8 +283,9 @@ export default {
         })
         that.isBarrier = { barrier: barrier, order: observePoint.order }
         sightline.removeAllTargetPoint()
-      }, 200);
+      }, 120);
     },
+
     async highLightLine(fengjivillageInfo) {
       viewer.entities.removeById("test");
       viewer.entities.removeById("test1");
@@ -332,9 +295,36 @@ export default {
       let targetPoint = { lon: fengjivillageInfo.villageXYZ[0], lat: fengjivillageInfo.villageXYZ[1], hei: villageheight }
       this.heightSightline(observePoint, targetPoint)
     },
+
     clearBarrier() {
       viewer.entities.removeById("test");
       viewer.entities.removeById("test1");
+    },
+
+    //添加缓冲面
+    addBufferPolyogn(positions, pointType) {
+      viewer.entities.removeById(pointType);
+      let color
+      if (pointType == "testPoint") {
+        color = new Cesium.Color.fromCssColorString("rgba(255, 0, 0, 0.2)")
+      } else if (pointType == "otherPoint") {
+        color = new Cesium.Color.fromCssColorString("rgba(0, 255, 0, 0.2)")
+      } else {
+        color = new Cesium.Color.fromCssColorString("rgba(255, 255, 0, 0.8)")
+      }
+      viewer.entities.add({
+        id: pointType,
+        polygon: {
+          hierarchy: new Cesium.PolygonHierarchy(positions),
+          material: color,
+          classificationType: Cesium.ClassificationType.BOTH
+        },
+      });
+    },
+
+    closeResultOverlapAnalysis() {
+      viewer.entities.removeById("testPoint");
+      viewer.entities.removeById("otherPoint");
     }
   }
 };
