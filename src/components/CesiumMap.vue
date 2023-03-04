@@ -4,7 +4,8 @@
       <div class="mainBox">
         <VisibleAnalysisTable :isBarrier="isBarrier" @clearBarrier="clearBarrier"
           @startVisibleAnalysis="startVisibleAnalysis" @highLightLine="highLightLine" />
-        <OverlapAnalysis @addBufferPolyogn="addBufferPolyogn" @closeResultOverlapAnalysis="closeResultOverlapAnalysis" />
+        <OverlapAnalysis @addBufferPolyogn="addBufferPolyogn" @closeResultOverlapAnalysis="closeResultOverlapAnalysis"
+          @zoomBuffer="zoomBuffer" />
       </div>
     </div>
   </div>
@@ -303,11 +304,12 @@ export default {
 
     //添加缓冲面
     addBufferPolyogn(positions, pointType) {
-      viewer.entities.removeById(pointType);
+      viewer.entities.removeById("overLap");
+      viewer.entities.removeById("disOverLap");
       let color
-      if (pointType == "testPoint") {
+      if (pointType == "overLap") {
         color = new Cesium.Color.fromCssColorString("rgba(255, 0, 0, 0.2)")
-      } else if (pointType == "otherPoint") {
+      } else if (pointType == "disOverLap") {
         color = new Cesium.Color.fromCssColorString("rgba(0, 255, 0, 0.2)")
       } else {
         color = new Cesium.Color.fromCssColorString("rgba(255, 255, 0, 0.8)")
@@ -323,8 +325,8 @@ export default {
     },
 
     closeResultOverlapAnalysis() {
-      viewer.entities.removeById("testPoint");
-      viewer.entities.removeById("otherPoint");
+      viewer.entities.removeById("overLap");
+      viewer.entities.removeById("disOverLap");
     }
   }
 };

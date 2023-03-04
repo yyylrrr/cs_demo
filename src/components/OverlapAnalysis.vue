@@ -24,7 +24,8 @@
       :options="{ top: 80, left: 1500, width: 400, buttonPin: false }" @close="closeResultOverlapAnalysis">
       <div class="analysisBox">
         <el-table :summary-method="getSummaries" show-summary :data="overlapAnalysisResult" height="80vh"
-          :cell-style="tableRowStyle" :header-cell-style="tableHeaderColor" class="analysis-result-list">
+          @row-dblclick="zoomBuffer" :cell-style="tableRowStyle" :header-cell-style="tableHeaderColor"
+          class="analysis-result-list">
           <el-table-column prop="testPoint" label="检测数据" align="center">
           </el-table-column>
           <el-table-column prop="otherPoint" label="被检测数据" align="center">
@@ -117,18 +118,19 @@ export default {
         this.isOverlapAnalysis = true
         for (let i = 0; i < this.overlapTestData.length; i++) {
           for (let j = 0; j < this.overlapOtherData.length; j++) {
-            let result = { testPoint: this.overlapTestData[i].name, otherPoint: this.overlapOtherData[j].name, isOverlap: "待计算" }
+            let result = { testPoint: this.overlapTestData[i].name, otherPoint: this.overlapOtherData[j].name, position: this.overlapTestData[i].position, isOverlap: "待计算" }
             setTimeout(() => {
-              let testPolygon = this.createPointBuffer(this.overlapTestData[i].position, this.inputRadius, "testPoint")
-              let otherPolygon = this.createPointBuffer(this.overlapOtherData[j].position, this.inputRadius, "otherPoint")
+              let testPolygon = this.createPointBuffer(this.overlapTestData[i].position, this.inputRadius)
+              let points = testPolygon[0]
+              let degreesArray = this.pointsToDegreesArray(points);
+
               let testPolygonF = turf.polygon(testPolygon)
-              let otherPolygonF = turf.polygon(otherPolygon)
-              let intersection = turf.intersect(testPolygonF, otherPolygonF)
+              let otherPointF = turf.point(this.overlapOtherData[j].position);
+              let intersection = turf.booleanPointInPolygon(otherPointF, testPolygonF)
+
+              this.$emit("addBufferPolyogn", Cesium.Cartesian3.fromDegreesArray(degreesArray), intersection == true ? "overLap" : "disOverLap")
 
               if (intersection) {
-                let points = intersection.geometry.coordinates[0]
-                let degreesArray = this.pointsToDegreesArray(points);
-                // this.$emit("addBufferPolyogn", Cesium.Cartesian3.fromDegreesArray(degreesArray), "intersecArea")
                 result.isOverlap = "冲突"
                 this.overLapCount++
                 this.overlapAnalysisResult.push(result)
@@ -137,7 +139,7 @@ export default {
                 this.disOverLapCount++
                 this.overlapAnalysisResult.push(result)
               }
-            }, (i * (this.overlapOtherData.length - 1) + i + j) * 500);
+            }, (i * (this.overlapOtherData.length - 1) + i + j) * 800);
           }
         }
       } else {
@@ -149,13 +151,10 @@ export default {
 
     },
 
-    createPointBuffer(point, radius, pointType) {
+    createPointBuffer(point, radius) {
       let pointF = turf.point(point);
       let buffered = turf.buffer(pointF, radius, { units: 'kilometers' });
       let coordinates = buffered.geometry.coordinates;
-      let points = coordinates[0];
-      let degreesArray = this.pointsToDegreesArray(points);
-      this.$emit("addBufferPolyogn", Cesium.Cartesian3.fromDegreesArray(degreesArray), pointType)
 
       return coordinates
     },
@@ -203,6 +202,15 @@ export default {
       });
 
       return sums;
+    },
+
+    zoomBuffer(row) {
+      let pointF = turf.point(row.position);
+      let buffered = turf.buffer(pointF, this.inputRadius, { units: 'kilometers' });
+      let coordinates = buffered.geometry.coordinates;
+      let points = coordinates[0];
+      let degreesArray = this.pointsToDegreesArray(points);
+      this.$emit("addBufferPolyogn", Cesium.Cartesian3.fromDegreesArray(degreesArray), row.isOverlap == "冲突" ? "overLap" : "disOverLap")
     },
   },
 }
