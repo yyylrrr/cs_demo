@@ -205,14 +205,14 @@ export default {
 
 <style>
 .dialog-3.dialog-drag .dialog-header {
-  background-color: transparent;
-  color: #eee;
+  background-color: transparent !important;
+  color: #eee !important;
 }
 
 /*最外层透明*/
 .el-table,
 .el-table__expanded-cell {
-  background-color: transparent;
+  background-color: transparent !important;
 }
 
 /* 表格内背景颜色 */

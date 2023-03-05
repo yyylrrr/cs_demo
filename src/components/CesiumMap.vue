@@ -4,8 +4,8 @@
       <div class="mainBox">
         <VisibleAnalysisTable :isBarrier="isBarrier" @clearBarrier="clearBarrier"
           @startVisibleAnalysis="startVisibleAnalysis" @highLightLine="highLightLine" />
-        <OverlapAnalysis @addBufferPolyogn="addBufferPolyogn" @closeResultOverlapAnalysis="closeResultOverlapAnalysis"
-          @zoomBuffer="zoomBuffer" />
+        <OverlapAnalysis @addBufferPolyogn="addBufferPolyogn" @closeResultOverlapAnalysis="closeResultOverlapAnalysis" />
+        <RoadVisible :isRoadBarrier="isRoadBarrier" @startRoadsVisibleAnalysis="startRoadsVisibleAnalysis" />
       </div>
     </div>
   </div>
@@ -14,17 +14,20 @@
 <script>
 import fengjijson from "../../public/data/风机.json"
 import villagejson from "../../public/data/村落.json"
+import roadjson from "../../public/data/公路.json"
 
 import villageSvg from "../../public/data/村落.svg"
 
 import VisibleAnalysisTable from "./VisibleAnalysisTable.vue"
 import OverlapAnalysis from "./OverlapAnalysis.vue"
+import RoadVisible from "./RoadVisible.vue"
 
 let viewer;
 export default {
   components: {
     VisibleAnalysisTable,
-    OverlapAnalysis
+    OverlapAnalysis,
+    RoadVisible
   },
 
   data() {
@@ -34,7 +37,9 @@ export default {
       visibleAnalysisJson: [],
       visibleAnalysisTable: [],
       isBarrier: {},
-      timerBox: ''
+      isRoadBarrier: {},
+      timerBox: '',
+      timerRoadBox: ''
     };
   },
 
@@ -77,6 +82,7 @@ export default {
     loadData() {
       this.addFengjis();
       this.addVillages();
+      this.addRoads();
     },
 
     createFengji(lon, lat, text) {
@@ -113,9 +119,9 @@ export default {
       });
     },
 
-    creatVillage(viewer, postion, text, img) {
+    creatVillage(viewer, position, text, img) {
       viewer.entities.add({
-        position: postion,
+        position: position,
         label: {
           text: text,
           // font: parseInt(objEntity.FontSize) * 2.2 + 'px ' + objEntity.FontName,
@@ -157,6 +163,26 @@ export default {
           villageSvg
         );
         viewer.scene.requestRender();
+      })
+    },
+
+    creatRoads(viewer, position) {
+      viewer.entities.add({
+        polyline: {
+          positions: Cesium.Cartesian3.fromDegreesArray(position),
+          width: 1,
+          material: Cesium.Color.RED,
+          clampToGround: true,
+        },
+      });
+    },
+
+    addRoads() {
+      roadjson.features[0].geometry.coordinates.forEach((element) => {
+        this.creatRoads(
+          viewer,
+          element.flat(),
+        );
       })
     },
 
@@ -327,6 +353,44 @@ export default {
     closeResultOverlapAnalysis() {
       viewer.entities.removeById("overLap");
       viewer.entities.removeById("disOverLap");
+    },
+
+    async startRoadsVisibleAnalysis(fengjiroadInfo) {
+      let fengjiheight = await this.getHeight(fengjiroadInfo.fengjiXYZ[0], fengjiroadInfo.fengjiXYZ[1]) + 120
+      let observePoint = [fengjiroadInfo.fengjiXYZ[0], fengjiroadInfo.fengjiXYZ[1], fengjiheight]
+      let roadheight = []
+      for (let i = 0; i < fengjiroadInfo.roadXYZ.length; i++) {
+        let roadZ = await this.getHeight(fengjiroadInfo.roadXYZ[i][0], fengjiroadInfo.roadXYZ[i][1])
+        roadheight.push([fengjiroadInfo.roadXYZ[i][0], fengjiroadInfo.roadXYZ[i][1], roadZ])
+      }
+      console.log(roadheight);
+      let canViewer = 0
+
+      for (let j = 0; j < roadheight.length; j++) {
+        // 需要指定scene
+        let sightline = new Cesium.Sightline(viewer.scene);
+        sightline.viewPosition.length = 0;
+        sightline.viewPosition = observePoint
+        sightline.build();
+
+        sightline.removeAllTargetPoint();
+        sightline.addTargetPoint({
+          position: [roadheight[j][0], roadheight[j][1], roadheight[j][2]],
+          name: "f" + j.toString()
+        });
+
+        let that = this
+        setTimeout(() => {
+          let barrier = sightline.getBarrierPoint("f" + j.toString(), (e) => { e })
+          canViewer += barrier.isViewer
+          console.log(canViewer);
+          that.isRoadBarrier = { barrier: canViewer, order:fengjiroadInfo.order }
+        }, 300);
+
+        setTimeout(() => {
+          sightline.removeAllTargetPoint();
+        }, 2400);
+      }
     }
   }
 };

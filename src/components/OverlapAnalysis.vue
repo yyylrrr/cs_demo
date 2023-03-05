@@ -221,7 +221,6 @@ export default {
 
 <style scoped>
 .overlapButton {
-  float: left;
   margin-top: 5px;
 }
 
