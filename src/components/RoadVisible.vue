@@ -4,7 +4,8 @@
     <dialog-drag v-show="isShowVisibleAnalysis" id="dialog-1" class="dialog-3" title="通视分析" pinned="false"
       :options="{ top: 80, left: 1500, width: 400, buttonPin: false }" @close="closeVisibleAnalysis">
       <div class="analysisBox">
-        <el-table :data="fengjiroadInfo" :cell-style="tableRowStyle" :header-cell-style="tableHeaderColor">
+        <el-table :data="fengjiroadInfo" :cell-style="tableRowStyle" :header-cell-style="tableHeaderColor"
+          @row-dblclick="roadVisible">
           <el-table-column prop="fengji" label="风机名" align="center">
           </el-table-column>
           <el-table-column prop="road" label="道路名" align="center">
@@ -87,13 +88,17 @@ export default {
           })
         }
       }
+      // for (let i = 0; i < this.fengjiroadInfo.length; i++) {
+      //   let timer = setTimeout(() => {
+      //     this.$emit("startRoadsVisibleAnalysis", this.fengjiroadInfo[i])
+      //   }, (i + 1) * 5000);
+      //   this.timeBox.push(timer)
+      // }
+    },
 
-      for (let i = 0; i < this.fengjiroadInfo.length; i++) {
-        let timer = setTimeout(() => {
-          this.$emit("startRoadsVisibleAnalysis", this.fengjiroadInfo[i])
-        }, (i + 1) * 5000);
-        this.timeBox.push(timer)
-      }
+    roadVisible(row) {
+      row.canViewer = "计算中..."
+      this.$emit("startRoadsVisibleAnalysis", row)
     },
 
     closeVisibleAnalysis() {

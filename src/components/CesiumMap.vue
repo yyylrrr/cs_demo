@@ -171,7 +171,7 @@ export default {
         polyline: {
           positions: Cesium.Cartesian3.fromDegreesArray(position),
           width: 1,
-          material: Cesium.Color.RED,
+          material: Cesium.Color.BLACK,
           clampToGround: true,
         },
       });
@@ -358,39 +358,73 @@ export default {
     async startRoadsVisibleAnalysis(fengjiroadInfo) {
       let fengjiheight = await this.getHeight(fengjiroadInfo.fengjiXYZ[0], fengjiroadInfo.fengjiXYZ[1]) + 120
       let observePoint = [fengjiroadInfo.fengjiXYZ[0], fengjiroadInfo.fengjiXYZ[1], fengjiheight]
-      let roadheight = []
+
+      let sightline = new Cesium.Sightline(viewer.scene);
+      sightline.viewPosition.length = 0;
+      let canViewer = 0
+      sightline.viewPosition = observePoint
+      sightline.build();
+
       for (let i = 0; i < fengjiroadInfo.roadXYZ.length; i++) {
         let roadZ = await this.getHeight(fengjiroadInfo.roadXYZ[i][0], fengjiroadInfo.roadXYZ[i][1])
-        roadheight.push([fengjiroadInfo.roadXYZ[i][0], fengjiroadInfo.roadXYZ[i][1], roadZ])
-      }
-      console.log(roadheight);
-      let canViewer = 0
-
-      for (let j = 0; j < roadheight.length; j++) {
-        // 需要指定scene
-        let sightline = new Cesium.Sightline(viewer.scene);
-        sightline.viewPosition.length = 0;
-        sightline.viewPosition = observePoint
-        sightline.build();
-
         sightline.removeAllTargetPoint();
         sightline.addTargetPoint({
-          position: [roadheight[j][0], roadheight[j][1], roadheight[j][2]],
-          name: "f" + j.toString()
+          position: [fengjiroadInfo.roadXYZ[i][0], fengjiroadInfo.roadXYZ[i][1], roadZ],
+          name: "f"
         });
 
         let that = this
         setTimeout(() => {
-          let barrier = sightline.getBarrierPoint("f" + j.toString(), (e) => { e })
+          let barrier = sightline.getBarrierPoint("f", (e) => { e })
           canViewer += barrier.isViewer
-          console.log(canViewer);
-          that.isRoadBarrier = { barrier: canViewer, order:fengjiroadInfo.order }
-        }, 300);
+          // if (barrier.isViewer === true) {
+          //   that.isRoadBarrier = { barrier: canViewer, order: fengjiroadInfo.order }
+          // } else if (i = fengjiroadInfo.roadXYZ.length - 1) {
+          //   that.isRoadBarrier = { barrier: canViewer, order: fengjiroadInfo.order }
+          // }
+        }, 20);
 
+        if (canViewer > 0) {
+          this.isRoadBarrier = { barrier: canViewer, order: fengjiroadInfo.order }
         setTimeout(() => {
           sightline.removeAllTargetPoint();
-        }, 2400);
+        }, 40);
+          break
+        } else if (i == fengjiroadInfo.roadXYZ.length - 1) {
+          this.isRoadBarrier = { barrier: canViewer, order: fengjiroadInfo.order }
+        setTimeout(() => {
+          sightline.removeAllTargetPoint();
+        }, 40);
+        }
+
       }
+      // let canViewer = 0
+
+      // for (let j = 0; j < roadheight.length; j++) {
+      //   // 需要指定scene
+      //   let sightline = new Cesium.Sightline(viewer.scene);
+      //   sightline.viewPosition.length = 0;
+      //   sightline.viewPosition = observePoint
+      //   sightline.build();
+
+      //   sightline.removeAllTargetPoint();
+      //   sightline.addTargetPoint({
+      //     position: [roadheight[j][0], roadheight[j][1], roadheight[j][2]],
+      //     name: "f" + j.toString()
+      //   });
+
+      //   let that = this
+      //   setTimeout(() => {
+      //     let barrier = sightline.getBarrierPoint("f" + j.toString(), (e) => { e })
+      //     canViewer += barrier.isViewer
+      //     console.log(canViewer);
+      //     that.isRoadBarrier = { barrier: canViewer, order:fengjiroadInfo.order }
+      //   }, 300);
+
+      //   setTimeout(() => {
+      //     sightline.removeAllTargetPoint();
+      //   }, 2400);
+      // }
     }
   }
 };
