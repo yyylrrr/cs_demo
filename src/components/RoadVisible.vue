@@ -4,6 +4,7 @@
     <dialog-drag v-show="isShowVisibleAnalysis" id="dialog-1" class="dialog-3" title="通视分析" pinned="false"
       :options="{ top: 80, left: 1500, width: 400, buttonPin: false }" @close="closeVisibleAnalysis">
       <div class="analysisBox">
+        <el-input v-model="roadChunkLength" size="medium" class="roadVisibleLength" placeholder="请输入判断距离（千米）"></el-input>
         <el-table :data="fengjiroadInfo" :cell-style="tableRowStyle" :header-cell-style="tableHeaderColor"
           @row-dblclick="roadVisible">
           <el-table-column prop="fengji" label="风机名" align="center">
@@ -21,11 +22,10 @@
 <script>
 import DialogDrag from "vue-dialog-drag";
 
-import FileSaver from 'file-saver'
-import XLSX from 'xlsx'
-
 import fengjijson from "../../public/data/风机.json"
 import roadjson from "../../public/data/公路.json"
+
+import * as turf from '@turf/turf'
 
 export default {
   components: {
@@ -42,6 +42,7 @@ export default {
       isShowVisibleAnalysis: false,
       fengjiroadInfo: [],
       timeBox: [],
+      roadChunkLength: ''
     };
   },
   methods: {
@@ -64,9 +65,18 @@ export default {
           name: roadjson.features[i].properties.NAME,
           position: []
         });
-        for (let j = 0; j < roadjson.features[i].geometry.coordinates.length; j++) {
-          roadInfo[i].position = roadInfo[i].position.concat(roadjson.features[i].geometry.coordinates[j])
-        }
+        // for (let j = 0; j < roadjson.features[i].geometry.coordinates.length; j++) {
+        //   // roadInfo[i].position = roadInfo[i].position.concat(roadjson.features[i].geometry.coordinates[j])
+        //   let line = turf.lineString(roadjson.features[i].geometry.coordinates[j])
+        //   let chunk = turf.lineChunk(line, this.roadChunkLength, { units: 'kilometers' });
+        //   for (let k = 0; k < chunk.features.length; k++) {
+        //     if (k == 0) {
+        //       roadInfo[i].position.push(chunk.features[k].geometry.coordinates[0], chunk.features[k].geometry.coordinates[1])
+        //     } else {
+        //       roadInfo[i].position.push(chunk.features[k].geometry.coordinates[1])
+        //     }
+        //   }
+        // }
       }
       return roadInfo
     },
@@ -88,17 +98,35 @@ export default {
           })
         }
       }
-      // for (let i = 0; i < this.fengjiroadInfo.length; i++) {
-      //   let timer = setTimeout(() => {
-      //     this.$emit("startRoadsVisibleAnalysis", this.fengjiroadInfo[i])
-      //   }, (i + 1) * 5000);
-      //   this.timeBox.push(timer)
-      // }
     },
 
     roadVisible(row) {
-      row.canViewer = "计算中..."
-      this.$emit("startRoadsVisibleAnalysis", row)
+      row.roadXYZ = []
+      if (this.roadChunkLength == '') {
+        this.$message({
+          message: '请输入判断距离！',
+          type: 'warning'
+        })
+      } else {
+        row.canViewer = "计算中..."
+        for (let i = 0; i < roadjson.features.length; i++) {
+          if (roadjson.features[i].properties.NAME == row.road) {
+            for (let j = 0; j < roadjson.features[i].geometry.coordinates.length; j++) {
+              // roadInfo[i].position = roadInfo[i].position.concat(roadjson.features[i].geometry.coordinates[j])
+              let line = turf.lineString(roadjson.features[i].geometry.coordinates[j])
+              let chunk = turf.lineChunk(line, this.roadChunkLength, { units: 'kilometers' });
+              for (let k = 0; k < chunk.features.length; k++) {
+                if (k == 0) {
+                  row.roadXYZ.push(chunk.features[k].geometry.coordinates[0], chunk.features[k].geometry.coordinates[1])
+                } else {
+                  row.roadXYZ.push(chunk.features[k].geometry.coordinates[1])
+                }
+              }
+            }
+          }
+        }
+        this.$emit("startRoadsVisibleAnalysis", row)
+      }
     },
 
     closeVisibleAnalysis() {
@@ -143,6 +171,12 @@ export default {
   border: 1px solid #eee;
   height: 80vh;
 }
+
+.roadVisibleLength {
+  margin: 5px 0;
+  width: 96%;
+  margin-left: 2%;
+}
 </style>
 
 <style>
@@ -171,5 +205,11 @@ export default {
 .el-table__header-wrapper tbody td.el-table__cell {
   color: #000 !important;
   font-size: 16px !important;
+}
+
+.roadVisibleLength .el-input__inner {
+  background: transparent !important;
+  color: #000 !important;
+  border: 1px solid #eee !important;
 }
 </style>

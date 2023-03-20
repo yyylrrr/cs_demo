@@ -44,7 +44,7 @@ import DialogDrag from "vue-dialog-drag";
 import fengjijson from "../../public/data/风机.json"
 import villagejson from "../../public/data/村落.json"
 
-import * as turf from '@turf/turf'
+
 
 export default {
   components: {
@@ -123,13 +123,10 @@ export default {
               let testPolygon = this.createPointBuffer(this.overlapTestData[i].position, this.inputRadius)
               let points = testPolygon[0]
               let degreesArray = this.pointsToDegreesArray(points);
-
               let testPolygonF = turf.polygon(testPolygon)
               let otherPointF = turf.point(this.overlapOtherData[j].position);
               let intersection = turf.booleanPointInPolygon(otherPointF, testPolygonF)
-
               this.$emit("addBufferPolyogn", Cesium.Cartesian3.fromDegreesArray(degreesArray), intersection == true ? "overLap" : "disOverLap")
-
               if (intersection) {
                 result.isOverlap = "冲突"
                 this.overLapCount++
@@ -155,7 +152,6 @@ export default {
       let pointF = turf.point(point);
       let buffered = turf.buffer(pointF, radius, { units: 'kilometers' });
       let coordinates = buffered.geometry.coordinates;
-
       return coordinates
     },
 
@@ -200,7 +196,6 @@ export default {
           return;
         }
       });
-
       return sums;
     },
 

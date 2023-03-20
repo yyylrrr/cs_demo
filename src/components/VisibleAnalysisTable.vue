@@ -98,10 +98,7 @@ export default {
         }, (i + 1) * 480);
         this.timeBox.push(timer)
       }
-
-      // this.$emit("startVisibleAnalysis")
     },
-
 
     closeVisibleAnalysis() {
       this.visibleCount = 0;
